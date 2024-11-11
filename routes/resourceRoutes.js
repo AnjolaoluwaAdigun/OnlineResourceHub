@@ -1,14 +1,30 @@
 const express = require('express');
-const multer = require('multer');
-const resourceController = require('../controllers/resourceController');
-const authenticateToken = require('../middlewares/auth');
-
 const router = express.Router();
-const upload = multer({ 
-  limits: { fileSize: 10485760 }, // 10MB limit
-  storage: multer.memoryStorage() 
-});
+const { uploadResource, uploadYouTubeLink, uploadImage, searchPage } = require('../controllers/resourceController');
+const multer = require('multer');
+const authenticateStudent = require('../middlewares/authenticateStudent'); 
+const path = require('path');
 
-router.post('/upload-resource', authenticateToken, upload.single('file'), resourceController.uploadResource);
+// Use memory storage for documents
+const memoryStorage = multer.memoryStorage();
+const uploadDoc = multer({ storage: memoryStorage });
+
+// Use disk storage for images
+const diskStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      cb(null, 'uploads/'); // Specify the directory to save the uploaded images
+  },
+  filename: (req, file, cb) => {
+      // Create a unique filename using the original name and current timestamp
+      cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+const uploadImageMiddleware = multer({ storage: diskStorage });
+
+// Apply authentication middleware to this route
+router.post('/uploadDoc', authenticateStudent, uploadDoc.single('file'), uploadResource);
+router.post('/uploadYouTubeLink', uploadYouTubeLink);
+router.post('/uploadImage', uploadImageMiddleware.single('image'), uploadImage);
+router.get('/search', searchPage);
 
 module.exports = router;
